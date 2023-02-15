@@ -16,6 +16,7 @@ import (
 
 type DeploymentBuilder struct {
 	Dep 	    *appsv1.Deployment
+	//CmBuilder 	*ConfigMapBuilder  // 关联对象
 	Client      client.Client
 	YamlConfig  *v12.DbConfig
 }
@@ -53,11 +54,13 @@ func NewDeploymentBuilder(config *v12.DbConfig, client client.Client) (*Deployme
 
 		err = yaml.Unmarshal(t.Bytes(), dep)
 		if err != nil {
-			klog.Errorf("yaml unmarshal error:", err)
+			klog.Errorf("deployment yaml unmarshal error:", err)
 			return nil, err
 		}
 
 	}
+
+
 
 	return &DeploymentBuilder{Dep: dep, Client: client, YamlConfig: config}, nil
 }
