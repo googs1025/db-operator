@@ -1,7 +1,7 @@
 apiVersion: api.practice.com/v1
 kind: DbConfig
 metadata:
-  name: mydbconfig
+  name: mydb1
 spec:
   replicas: 1
-  dsn: "mysql dsn"
+  dsn: "root:123456@tcp(mysqltest:3306)/test?charset=utf8mb4&parseTime=True&loc=Local"
