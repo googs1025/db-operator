@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"context"
 	configv1 "github.com/myoperator/dbcore/pkg/apis/dbconfig/v1"
-	"html/template"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"text/template"
 )
 
 type ConfigMapBuilder struct {
@@ -29,25 +28,30 @@ func NewConfigMapBuilder(yamlConfig *configv1.DbConfig, client client.Client) (*
 	}, cm)
 	if err != nil {
 
-		cm.Name = yamlConfig.Name
+		cm.Name = name(yamlConfig.Name)
 		cm.Namespace = yamlConfig.Namespace
-		tpl, err := template.New("configmap").Parse(ConfigmapTemplate)
-		if err != nil {
-			klog.Errorf("template parse error:", err)
-			return nil, err
-		}
+		cm.Data = make(map[string]string)
 
-		var t bytes.Buffer
-		err = tpl.Execute(&t, cm)
-		if err != nil {
-			klog.Errorf("template execute error:", err)
-			return nil, err
-		}
-		err = yaml.Unmarshal(t.Bytes(), cm)
-		if err != nil {
-			klog.Errorf("configmap yaml unmarshal error:", err)
-			return nil, err
-		}
+		// FIXME: 不再使用，模版由configmap配置文件改为只有Data字段，所以下列代码废除
+		//cm.Name = yamlConfig.Name
+		//cm.Namespace = yamlConfig.Namespace
+		//tpl, err := template.New("configmap").Parse(ConfigmapTemplate)
+		//if err != nil {
+		//	klog.Errorf("template parse error:", err)
+		//	return nil, err
+		//}
+		//
+		//var t bytes.Buffer
+		//err = tpl.Execute(&t, cm)
+		//if err != nil {
+		//	klog.Errorf("template execute error:", err)
+		//	return nil, err
+		//}
+		//err = yaml.Unmarshal(t.Bytes(), cm)
+		//if err != nil {
+		//	klog.Errorf("configmap yaml unmarshal error:", err)
+		//	return nil, err
+		//}
 
 	}
 
@@ -66,10 +70,25 @@ func(c *ConfigMapBuilder) setOwner() *ConfigMapBuilder{
 	return c
 }
 
+const configMapKey = "app.yml"
 
-// 更新configmap中的字段
+// 更新与渲染configmap中的字段
 func (c *ConfigMapBuilder) apply() *ConfigMapBuilder {
 
+	tpl, err := template.New("configmap").Parse(ConfigmapTemplate)
+	if err != nil {
+		klog.Errorf("template parse error:", err)
+		return c
+	}
+
+	var t bytes.Buffer
+	err = tpl.Execute(&t, c.YamlConfig.Spec)
+	if err != nil {
+		klog.Errorf("template execute error:", err)
+		return c
+	}
+
+	c.CM.Data[configMapKey] = t.String()
 
 	return c
 }
@@ -79,7 +98,7 @@ func (c *ConfigMapBuilder) Build(ctx context.Context) (*corev1.ConfigMap, error)
 
 
 	if c.CM.CreationTimestamp.IsZero() {
-		c.apply().setOwner() // 更新cm对象的字段
+		c.apply().setOwner() // 更新cm对象的字段，且设置ownerReferences
 		err := c.Client.Create(ctx, c.CM)
 		if err != nil {
 			klog.Error("create configmap err: ", err)
@@ -94,8 +113,6 @@ func (c *ConfigMapBuilder) Build(ctx context.Context) (*corev1.ConfigMap, error)
 			klog.Error("update configmap err: ", err)
 			return nil, err
 		}
-
-
 	}
 	return c.CM, nil
 }
