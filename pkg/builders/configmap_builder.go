@@ -3,6 +3,8 @@ package builders
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	configv1 "github.com/myoperator/dbcore/pkg/apis/dbconfig/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +18,7 @@ type ConfigMapBuilder struct {
 	CM  		*corev1.ConfigMap
 	YamlConfig  *configv1.DbConfig
 	Client  	client.Client
+	DataKey string // 把cm中的app.yml的数据  进行md5更新
 }
 
 func NewConfigMapBuilder(yamlConfig *configv1.DbConfig, client client.Client) (*ConfigMapBuilder, error) {
@@ -93,12 +96,29 @@ func (c *ConfigMapBuilder) apply() *ConfigMapBuilder {
 	return c
 }
 
+// parseKey 将configmap里面的 key=app.yml的内容 取出变成md5
+func(c *ConfigMapBuilder) parseKey() *ConfigMapBuilder{
+
+	if appData, ok := c.CM.Data[configMapKey]; ok{
+		c.DataKey = Md5(appData)
+		return c
+	}
+	c.DataKey = ""
+	return  c
+}
+
+func Md5(str string) string  {
+	h := md5.New()
+	h.Write([]byte(str))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 // Build 构建出configmap对象
 func (c *ConfigMapBuilder) Build(ctx context.Context) (*corev1.ConfigMap, error) {
 
 
 	if c.CM.CreationTimestamp.IsZero() {
-		c.apply().setOwner() // 更新cm对象的字段，且设置ownerReferences
+		c.apply().setOwner().parseKey() // 更新cm对象的字段，且设置ownerReferences
 		err := c.Client.Create(ctx, c.CM)
 		if err != nil {
 			klog.Error("create configmap err: ", err)
@@ -107,7 +127,7 @@ func (c *ConfigMapBuilder) Build(ctx context.Context) (*corev1.ConfigMap, error)
 	} else {
 
 		// 更新:法一 update方式
-		c.apply()
+		c.apply().parseKey()
 		err := c.Client.Update(ctx, c.CM)
 		if err != nil {
 			klog.Error("update configmap err: ", err)

@@ -17,6 +17,8 @@ spec:
       labels:
         app: dbcore-{{ .Namespace}}-{{ .Name }}
         version: v1
+      annotations:
+        dbcore.config/md5: ''
     spec:
       initContainers:
         - name: init-test

@@ -31,17 +31,6 @@ func(r *DbConfigController) Reconcile(ctx context.Context, req reconcile.Request
 	}
 	fmt.Println(config)
 
-	// deployment 构建
-	depBuilder, err := builders.NewDeploymentBuilder(config, r.Client)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	dep, err := depBuilder.Build(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// configmap 构建
 	cmBuilder, err := builders.NewConfigMapBuilder(config, r.Client)
 	if err != nil {
@@ -52,6 +41,18 @@ func(r *DbConfigController) Reconcile(ctx context.Context, req reconcile.Request
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	// deployment 构建
+	depBuilder, err := builders.NewDeploymentBuilder(config, r.Client, cmBuilder)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	dep, err := depBuilder.Build(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 
 
 	fmt.Println(dep)

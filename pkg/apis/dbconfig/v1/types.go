@@ -27,8 +27,11 @@ type DbConfigList struct {
 }
 
 type DbConfigSpec struct {
-	Replicas  int `json:"replicas,omitempty"`
-	Dsn string `json:"dsn,omitempty"`
+	Replicas  	int 	`json:"replicas,omitempty"`
+	Dsn 		string 	`json:"dsn,omitempty"`
+	MaxOpenConn int 	`json:"maxOpenConn,omitempty"`
+	MaxLifeTime int 	`json:"maxLifeTime,omitempty"`
+	MaxIdleConn int 	`json:"maxIdleConn,omitempty"`
 }
 
 type DbConfigStatus struct {
