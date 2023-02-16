@@ -19,6 +19,9 @@ spec:
         - name: Age
           type: date
           jsonPath: .metadata.creationTimestamp
+        - name: MaxOpenConn
+          type: integer
+          jsonPath: .spec.maxOpenConn
       schema:
         openAPIV3Schema:
           type: object
@@ -30,6 +33,20 @@ spec:
                   type: integer
                   minimum: 1 # 设置最大与最小值
                   maximum: 20
+                maxOpenConn:
+                  type: integer
+                  minimum: 1
+                  maximum: 2000
+                  default: 15
+                maxIdleConn:
+                  type: integer
+                  minimum: 1
+                  maximum: 2000
+                  default: 5
+                maxLifeTime:
+                  type: integer
+                  minimum: 60   #最小60秒
+                  default: 600  #默认10分钟
                 dsn:
                   type: string
               required: # 设置必填字段。
@@ -62,3 +79,10 @@ spec:
     # kind的简称，就像service的简称是svc
     shortNames:
       - dc
+
+
+# 附注：如果要修改或新增crd中的字段。分为以下几步：
+# 1. 修改crd定义
+# 2. 修改printColumn显示
+# 3. 修改types.go文件
+# 4. 如果有对应的业务逻辑，需要进行修改，ex: 模版内渲染与解析

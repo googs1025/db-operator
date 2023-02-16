@@ -16,6 +16,7 @@ import (
 
 type DeploymentBuilder struct {
 	Dep 	    *appsv1.Deployment
+	CmBuilder 	*ConfigMapBuilder  // 关联对象
 	Client      client.Client
 	YamlConfig  *v12.DbConfig
 }
@@ -24,7 +25,7 @@ func name(name string) string {
 	return "dbcore-" + name
 }
 
-func NewDeploymentBuilder(config *v12.DbConfig, client client.Client) (*DeploymentBuilder, error) {
+func NewDeploymentBuilder(config *v12.DbConfig, client client.Client, cmBuilder *ConfigMapBuilder) (*DeploymentBuilder, error) {
 
 	dep := &appsv1.Deployment{}
 	dep.Name = config.Name
@@ -53,13 +54,15 @@ func NewDeploymentBuilder(config *v12.DbConfig, client client.Client) (*Deployme
 
 		err = yaml.Unmarshal(t.Bytes(), dep)
 		if err != nil {
-			klog.Errorf("yaml unmarshal error:", err)
+			klog.Errorf("deployment yaml unmarshal error:", err)
 			return nil, err
 		}
 
 	}
 
-	return &DeploymentBuilder{Dep: dep, Client: client, YamlConfig: config}, nil
+
+
+	return &DeploymentBuilder{Dep: dep, Client: client, YamlConfig: config, CmBuilder: cmBuilder}, nil
 }
 
 
@@ -87,21 +90,34 @@ func(d *DeploymentBuilder) setOwner() *DeploymentBuilder{
 	return d
 }
 
+const CMAnnotation = "dbcore.config/md5"
+
+func(d *DeploymentBuilder) setCMAnnotation(configStr string) {
+	d.Dep.Spec.Template.Annotations[CMAnnotation] = configStr
+}
+
 // Build 构建出deployment对象
 func (d *DeploymentBuilder) Build(ctx context.Context) (*appsv1.Deployment, error) {
 
 
 	if d.Dep.CreationTimestamp.IsZero() {
 		d.apply().setOwner() // 更新deployment对象的字段，ex: replicas，且创建时需要设置OwnerReferences
+
+		//设置 config md5
+		d.setCMAnnotation(d.CmBuilder.DataKey)
+
 		err := d.Client.Create(ctx, d.Dep)
 		if err != nil {
 			klog.Error("create deployment err: ", err)
 			return nil, err
 		}
+
 	} else {
 
 		// 更新:法一 update方式
 		d.apply() // 更新deployment对象的字段，ex: replicas
+		// 设置 config md5
+		d.setCMAnnotation(d.CmBuilder.DataKey)
 		err := d.Client.Update(ctx, d.Dep)
 		if err != nil {
 			klog.Error("update deployment err: ", err)

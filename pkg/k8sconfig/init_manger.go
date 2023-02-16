@@ -30,13 +30,13 @@ func InitManager() {
 		mgr.GetLogger().Error(err, "unable add scheme")
 		os.Exit(1)
 	}
-	dbconfigController := controllers.NewDbConfigController()
+	dbConfigController := controllers.NewDbConfigController()
 	if err = builder.ControllerManagedBy(mgr).
 		For(&v1.DbConfig{}).
 		Watches(&source.Kind{Type: &appsv1.Deployment{}}, // 监听子资源，为了在误删除子资源时，会重新创建。
 			handler.Funcs{
-				DeleteFunc: dbconfigController.OnDelete,
-				UpdateFunc: dbconfigController.OnUpdate,
+				DeleteFunc: dbConfigController.OnDelete,
+				UpdateFunc: dbConfigController.OnUpdate,
 			},
 		).
 		Complete(controllers.NewDbConfigController());err != nil {
