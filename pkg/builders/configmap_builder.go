@@ -18,7 +18,7 @@ type ConfigMapBuilder struct {
 	CM  		*corev1.ConfigMap
 	YamlConfig  *configv1.DbConfig
 	Client  	client.Client
-	DataKey string // 把cm中的app.yml的数据  进行md5更新
+	DataKey 	string // 将cm中的app.yml的数据  进行md5更新
 }
 
 func NewConfigMapBuilder(yamlConfig *configv1.DbConfig, client client.Client) (*ConfigMapBuilder, error) {
