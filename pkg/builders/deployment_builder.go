@@ -90,20 +90,22 @@ func(d *DeploymentBuilder) setOwner() *DeploymentBuilder{
 	return d
 }
 
+// 配合滚动deployment使用
 const CMAnnotation = "dbcore.config/md5"
 
 func(d *DeploymentBuilder) setCMAnnotation(configStr string) {
+	// 需要放在Template中的Annotations字段，因为才能成功触发pod的滚动更新
 	d.Dep.Spec.Template.Annotations[CMAnnotation] = configStr
 }
 
 // Build 构建出deployment对象
 func (d *DeploymentBuilder) Build(ctx context.Context) (*appsv1.Deployment, error) {
 
-
+	// 创建
 	if d.Dep.CreationTimestamp.IsZero() {
 		d.apply().setOwner() // 更新deployment对象的字段，ex: replicas，且创建时需要设置OwnerReferences
 
-		//设置 config md5
+		// 设置 config md5
 		d.setCMAnnotation(d.CmBuilder.DataKey)
 
 		err := d.Client.Create(ctx, d.Dep)
@@ -111,7 +113,7 @@ func (d *DeploymentBuilder) Build(ctx context.Context) (*appsv1.Deployment, erro
 			klog.Error("create deployment err: ", err)
 			return nil, err
 		}
-
+	// 更新
 	} else {
 
 		// 更新:法一 update方式

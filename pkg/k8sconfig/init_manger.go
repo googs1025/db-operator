@@ -19,6 +19,7 @@ import (
 func InitManager() {
 
 	logf.SetLogger(zap.New())
+	// 1. 初始化管理器
 	mgr, err := manager.New(K8sRestConfig(), manager.Options{
 		Logger:  logf.Log.WithName("dbcore"),
 	})
@@ -26,24 +27,30 @@ func InitManager() {
 		mgr.GetLogger().Error(err, "unable to set up manager")
 		os.Exit(1)
 	}
+
+	// 2. 注册Scheme
 	if err = v1.SchemeBuilder.AddToScheme(mgr.GetScheme());err!=nil{
 		mgr.GetLogger().Error(err, "unable add scheme")
 		os.Exit(1)
 	}
+
+	// 3. 控制器相关
 	dbConfigController := controllers.NewDbConfigController()
 	if err = builder.ControllerManagedBy(mgr).
-		For(&v1.DbConfig{}).
-		Watches(&source.Kind{Type: &appsv1.Deployment{}}, // 监听子资源，为了在误删除子资源时，会重新创建。
+		For(&v1.DbConfig{}). // 监听主资源
+		// 监听子资源，为了在误删除子资源时，会重新创建。
+		Watches(&source.Kind{Type: &appsv1.Deployment{}},
 			handler.Funcs{
 				DeleteFunc: dbConfigController.OnDelete,
 				UpdateFunc: dbConfigController.OnUpdate,
 			},
 		).
+		// 这里的传入对象，需要实现Reconcile。
 		Complete(controllers.NewDbConfigController());err != nil {
 		mgr.GetLogger().Error(err, "unable to create manager")
 		os.Exit(1)
 	}
-
+	// 4. 启动管理器
 	if err = mgr.Start(signals.SetupSignalHandler()); err != nil {
 		mgr.GetLogger().Error(err, "unable to start manager")
 		os.Exit(1)

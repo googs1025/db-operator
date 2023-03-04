@@ -1,6 +1,7 @@
 package builders
 
 // 模版内容
+// annotations放在pod中，是因为需要触发滚动更新。
 const DeploymentTemplate = `
 apiVersion: apps/v1
 kind: Deployment

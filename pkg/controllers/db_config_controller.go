@@ -22,7 +22,7 @@ func NewDbConfigController() *DbConfigController {
 	return &DbConfigController{}
 }
 
-
+// Reconcile 调协loop
 func(r *DbConfigController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	config := &v1.DbConfig{}
 	err := r.Get(ctx, req.NamespacedName, config)
